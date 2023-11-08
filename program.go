@@ -3,7 +3,6 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"strings"
@@ -21,7 +20,7 @@ var (
 )
 
 func debug(inspect bool, liveInfo, filename string) error {
-	content, err := ioutil.ReadFile(filename)
+	content, err := os.ReadFile(filename)
 	if err != nil {
 		log.Fatal(err)
 		return err
@@ -37,13 +36,16 @@ func debug(inspect bool, liveInfo, filename string) error {
 		fmt.Println("Type 'help' or 'h' for list of commands.")
 	}
 
-	printer := console.PrinterFunc(func(s string) {
-		prefix := ""
-		if inspect {
-			prefix = "< "
-		}
-		fmt.Printf("%s%s\n", prefix, s)
-	})
+	printer := &console.StdPrinter{
+		StdoutPrint: func(s string) {
+			prefix := ""
+			if inspect {
+				prefix = "< "
+			}
+			fmt.Printf("%s%s\n", prefix, s)
+		},
+		StderrPrint: func(s string) { fmt.Printf("%s\n", s) },
+	}
 
 	loader := func(requestedPath string) ([]byte, error) {
 		if requestedPath != "" && inspect {
@@ -52,7 +54,13 @@ func debug(inspect bool, liveInfo, filename string) error {
 		return nil, nil
 	}
 
-	_, err = parser.ParseFile(nil, filename, string(content), 0, parser.WithSourceMapLoader(loader))
+	ast, err := parser.ParseFile(nil, filename, string(content), 0, parser.WithSourceMapLoader(loader))
+	if err != nil {
+		log.Fatal(err)
+		return err
+	}
+
+	prg, err := goja.CompileASTDebug(ast, false)
 	if err != nil {
 		log.Fatal(err)
 		return err
@@ -79,8 +87,8 @@ func debug(inspect bool, liveInfo, filename string) error {
 			for {
 				fmt.Printf("debug%s> ", getInfo(liveInfo))
 				userInput, _ := reader.ReadString('\n')
-				// convert CRLF to LF
-				userInput = strings.Replace(userInput, "\n", "", -1)
+				// remove newlines and extra spaces
+				userInput = strings.TrimSpace(userInput)
 				if !repl(userInput) {
 					reason = dbg.Continue()
 					printDebuggingReason(reason)
@@ -89,7 +97,7 @@ func debug(inspect bool, liveInfo, filename string) error {
 		}
 	}()
 
-	runtime.RunScript(filename, string(content))
+	_, err = runtime.RunProgram(prg)
 	if err != nil {
 		log.Fatal(err)
 		return err

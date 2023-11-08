@@ -33,7 +33,15 @@ func parseCmd(userInput string) (*Command, error) {
 	return &Command{Name: name, Args: args}, nil
 }
 
+var lastInput = "h"
+
 func repl(userInput string) bool {
+	if userInput == "" {
+		userInput = lastInput
+	} else {
+		lastInput = userInput
+	}
+
 	cmd, err := parseCmd(userInput)
 	if err != nil {
 		fmt.Println(err.Error())
@@ -93,6 +101,11 @@ func repl(userInput string) bool {
 		return false
 	case "step", "s":
 		err = dbg.StepIn()
+		if err != nil {
+			return false
+		}
+	case "steppc", "pc":
+		err = dbg.StepPC()
 		if err != nil {
 			return false
 		}
@@ -183,6 +196,7 @@ next, n                  Continue to next line in current file
 cont, c                  Resume execution until next debugger line
 step, s                  Step into, potentially entering a function
 out, o                   Step out, leaving the current function (not implemented yet)
+steppc, pc               Step one program counter (mainly used for debugging runtime)
 exec, e                  Evaluate the expression and print the value
 list, l                  Print the source around the current line where execution is currently paused
 print, p                 Print the provided variable's value
