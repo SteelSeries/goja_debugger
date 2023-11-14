@@ -104,6 +104,11 @@ func repl(userInput string) bool {
 		if err != nil {
 			return false
 		}
+	case "out", "o":
+		err = dbg.StepOut()
+		if err != nil {
+			return false
+		}
 	case "steppc", "pc":
 		err = dbg.StepPC()
 		if err != nil {
@@ -195,7 +200,7 @@ run, r                   Run program until a breakpoint/debugger statement if pr
 next, n                  Continue to next line in current file
 cont, c                  Resume execution until next debugger line
 step, s                  Step into, potentially entering a function
-out, o                   Step out, leaving the current function (not implemented yet)
+out, o                   Step out, leaving the current function
 steppc, pc               Step one program counter (mainly used for debugging runtime)
 exec, e                  Evaluate the expression and print the value
 list, l                  Print the source around the current line where execution is currently paused
